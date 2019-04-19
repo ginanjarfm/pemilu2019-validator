@@ -1,4 +1,7 @@
 *.json
 *.pyc
+*.jpg
+*.png
+*.log
 .vscode
 output.log

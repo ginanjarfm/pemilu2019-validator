@@ -25,14 +25,14 @@ api = API(SITE_URL, DUMP_API)
 def get_metadata():
     global candidates
 
+    version = api.get_json('version.json')
+    log.critical('[SUMMARY] %s', version.get('version'))
+
     response = api.get_json(SECTION + '.json')
     candidates = response.items()
 
 def show_summary():
     global candidates
-
-    version = api.get_json('version.json')
-    log.critical('[SUMMARY] %s', version.get('version'))
 
     summary = api.get_json(DOMAIN, SECTION + '.json')
     chart = summary.get('chart')
@@ -139,9 +139,10 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
         for (k, v) in candidates:
             prev = result.get(k) if result.get(k) is not None else 0
             result[k] = prev + chart.get(k)
-            candidate_percentage = round(100 * float(chart.get(k))/candidate_total, 2)
-            log.critical('[VALIDATION] %s', v.get('nama'))
-            log.critical('[VALIDATION]     %s votes (%.2f%%)', "{:,}".format(chart.get(k)), candidate_percentage)
+            if candidate_total != 0:
+                candidate_percentage = round(100 * float(chart.get(k))/candidate_total, 2)
+                log.critical('[VALIDATION] %s', v.get('nama'))
+                log.critical('[VALIDATION]     %s votes (%.2f%%)', "{:,}".format(chart.get(k)), candidate_percentage)
     else:
         log.critical('[VALIDATION] VALIDATE %s => %s => %s => %s => %s', v0, v1, v2, v3, v4)
         log.critical('[VALIDATION] WAITING')

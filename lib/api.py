@@ -19,6 +19,7 @@ class API:
         self.api_url = site_url + 'static/json/'
         self.image_url = site_url + 'img/c/'
         self.dump = dump
+        self.version = datetime.now().strftime('json/%Y%m%d/')
 
     def get_json(self, *args):
         path = '/'.join(args)
@@ -33,8 +34,10 @@ class API:
             response = s.get(self.api_url + path, verify=False)
         self.log.debug('result %s', response.json())
         if self.dump:
+            if "version.json" in path:
+                self.version = response.get('version').translate(None, '-: ')
             self.log.debug('dumping json %s', path)
-            filename = datetime.now().strftime('json/%Y%m%d/') + path
+            filename = self.version + path
             if not os.path.exists(os.path.dirname(filename)):
                 try:
                     os.makedirs(os.path.dirname(filename))
