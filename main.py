@@ -4,6 +4,8 @@ import os
 import errno
 import json
 import argparse
+import signal
+import sys
 
 from datetime import datetime
 from lib.api import API
@@ -18,9 +20,17 @@ DUMP_API = False
 candidates = {}
 result = {}
 messages = []
+state = []
 
 log = logging.getLogger(__name__)
 api = {}
+
+def signal_handler(signal, frame):
+    if (len(state) > 0):
+        save_state(*state)
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 def get_metadata():
     global candidates
@@ -68,6 +78,7 @@ def show_result():
 
 def validate_pools():
     global candidates
+    global state
 
     last_state = read_state()
     skip = len(last_state) == 5 or False
@@ -88,9 +99,11 @@ def validate_pools():
                                     administratives = api.get_json('wilayah', k0, k1, k2, k3 + '.json')
                                     for (k4, v4) in administratives.items():
                                         if (skip and k4 == last_state[4]) or not skip:
+                                            state = [k0, k1, k2, k3, k4]
                                             check_one(k0, k1, k2, k3, k4, v0.get('nama'), v1.get('nama'), v2.get('nama'), v3.get('nama'), v4.get('nama'))
-                                            skip = False
-                                            clear_state()
+                                            if skip:
+                                                skip = False
+                                                clear_state()
 
 def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
     global candidates
@@ -187,12 +200,19 @@ def save_data(pool, result, images):
                             raise
             api.get_image(filename, pool[0:3], pool[3:6], pool, image)
 
+def save_state(*args):
+    log.critical('[STATE] Saving last state')
+    with open('.state', "w") as f:
+        f.writelines(["%s\n" % item  for item in args])
+
 def read_state():
+    log.critical('[STATE] Read last state')
     with open('.state') as f:
         content = f.readlines()
     return [x.strip() for x in content]
 
 def clear_state():
+    log.critical('[STATE] Clear last state')
     with open('.state', "w") as f:
         f.write('')
 
@@ -205,6 +225,7 @@ def main():
     parser.add_argument('--save_log', help='save failure validation')
     parser.add_argument('--save_image', help='save failure validation image')
     parser.add_argument('--dump_api', help='dump data')
+    parser.add_argument('--restart', help='restart state from the beginning', action='store_true')
     args = parser.parse_args()
 
     SAVE_LOG = args.save_log or SAVE_LOG
@@ -220,6 +241,10 @@ def main():
         level=logging.CRITICAL)
     # logging.getLogger().addHandler(logging.StreamHandler())
     logging.captureWarnings(True)
+
+    if args.restart:
+        clear_state()
+
     get_metadata()
     validate_pools()
     # check_one('12920', '13905', '13906', '13907', '900070361', '1', '2', '3', '4', '5')

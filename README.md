@@ -12,12 +12,15 @@ This is a tools to validate KPU announcement from `https://pemilu2019.kpu.go.id/
 
 ## Feature
 
+`$ python main.py -h`
+
 Feature | Description
 --- | ---
 Counting process validation | Validate `"Hitung Suara"` result
-Dump Data | Activate flag `DUMP_API`
-Save Failure Validation | Activate flag `SAVE_LOG`
-Save Failure Validation Image | Activate flag `SAVE_IMAGE`
+Dump Data | Activate flag `dump_api`
+Save Failure Validation | Activate flag `save_log`
+Save Failure Validation Image | Activate flag `save_image`
+Restart validation progress | Activate flag `restart`
 
 ## Example Findings
 
