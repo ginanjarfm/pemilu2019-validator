@@ -3,12 +3,12 @@ import urllib
 import os
 import errno
 import json
+import argparse
 
 from datetime import datetime
 from lib.api import API
 
 # config
-SITE_URL = 'https://pemilu2019.kpu.go.id/'
 DOMAIN = 'hhcw'
 SECTION = 'ppwp'
 SAVE_LOG = True
@@ -20,7 +20,7 @@ result = {}
 messages = []
 
 log = logging.getLogger(__name__)
-api = API(SITE_URL, DUMP_API)
+api = {}
 
 def get_metadata():
     global candidates
@@ -105,33 +105,39 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
         data_exist = False
 
     if (int(pool_invalid or 0) + int(pool_valid or 0) != int(pool_total or 0)):
-        save_log('[VALIDATION] VALIDATE ' + v0 + ' => ' + v1 + ' => ' + v2 + ' => ' + v3 + ' => ' + v4 + '', k4)
+        save_log('[VALIDATION] VALIDATE [' + k0 + ']' + v0 + ' => [' + k1 + ']' + v1 + ' => [' + k2 + ']' + v2 + ' => [' + k3 + ']' + v3 + ' => [' + k4 + ']' + v4 + '', k4)
         save_log('[VALIDATION] [FAILED 1]: Total pool calculation mismatch!', k4)
         save_log('[VALIDATION] pool valid: ' + str(pool_valid), k4)
         save_log('[VALIDATION] pool invalid: ' + str(pool_invalid), k4)
         save_log('[VALIDATION] Total: ' + str(pool_valid + pool_invalid) + ' should be ' + str(pool_total), k4)
         save_data(k4, pools, images)
+        diff = abs((int(pool_invalid or 0) + int(pool_valid or 0)) - int(pool_total or 0))
+        save_log('[VALIDATION] [DIFF 1]: ' + str(diff), k4)
         valid = False;
 
     if (int(dpt_used or 0) != int(pool_total or 0)):
-        save_log('[VALIDATION] VALIDATE ' + v0 + ' => ' + v1 + ' => ' + v2 + ' => ' + v3 + ' => ' + v4 + '', k4)
+        save_log('[VALIDATION] VALIDATE [' + k0 + ']' + v0 + ' => [' + k1 + ']' + v1 + ' => [' + k2 + ']' + v2 + ' => [' + k3 + ']' + v3 + ' => [' + k4 + ']' + v4 + '', k4)
         save_log('[VALIDATION] [FAILED 2]: total DPT votes and total pool mismatch, it should be equal!', k4)
         save_log('[VALIDATION] DPT participation: ' + str(dpt_used), k4)
         save_log('[VALIDATION] pool total: ' + str(pool_total), k4)
         save_data(k4, pools, images)
+        diff = abs(int(dpt_used or 0) - int(pool_total or 0))
+        save_log('[VALIDATION] [DIFF 2]: ' + str(diff), k4)
         valid = False;
 
     if (int(pool_valid or 0) != int(candidate_total or 0)):
-        save_log('[VALIDATION] VALIDATE ' + v0 + ' => ' + v1 + ' => ' + v2 + ' => ' + v3 + ' => ' + v4 + '', k4)
+        save_log('[VALIDATION] VALIDATE [' + k0 + ']' + v0 + ' => [' + k1 + ']' + v1 + ' => [' + k2 + ']' + v2 + ' => [' + k3 + ']' + v3 + ' => [' + k4 + ']' + v4 + '', k4)
         save_log('[VALIDATION] [FAILED 3]: sum of candidates and total pool mismatch', k4)
         save_log('[VALIDATION] sum of candidates: ' + str(candidate_total), k4)
         save_log('[VALIDATION] pool total: ' + str(pool_valid), k4)
         save_data(k4, pools, images)
+        diff = abs(int(pool_valid or 0) - int(candidate_total or 0))
+        save_log('[VALIDATION] [DIFF 3]: ' + str(diff), k4)
         valid = False;
 
     if data_exist:
         if valid:
-            log.critical('[VALIDATION] VALIDATE %s => %s => %s => %s => %s', v0, v1, v2, v3, v4)
+            log.critical('[VALIDATION] VALIDATE [%s]%s => [%s]%s => [%s]%s => [%s]%s => [%s]%s', k0, v0, k1, v1, k2, v2, k3, v3, k4, v4)
             log.critical('[VALIDATION] OK')
         else:
             log.critical('[VALIDATION] FAILED')
@@ -144,7 +150,7 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
                 log.critical('[VALIDATION] %s', v.get('nama'))
                 log.critical('[VALIDATION]     %s votes (%.2f%%)', "{:,}".format(chart.get(k)), candidate_percentage)
     else:
-        log.critical('[VALIDATION] VALIDATE %s => %s => %s => %s => %s', v0, v1, v2, v3, v4)
+        log.critical('[VALIDATION] VALIDATE [%s]%s => [%s]%s => [%s]%s => [%s]%s => [%s]%s', k0, v0, k1, v1, k2, v2, k3, v3, k4, v4)
         log.critical('[VALIDATION] WAITING')
 
 def save_log(message, pool):
@@ -171,6 +177,22 @@ def save_data(pool, result, images):
             api.get_image(filename, pool[0:3], pool[3:6], pool, image)
 
 def main():
+    global api
+    global SAVE_LOG, SAVE_IMAGE, DUMP_API
+
+    parser = argparse.ArgumentParser(description='Arguments')
+    parser.add_argument('--site_url', help='run with site_url', required=True)
+    parser.add_argument('--save_log', help='save failure validation')
+    parser.add_argument('--save_image', help='save failure validation image')
+    parser.add_argument('--dump_api', help='dump data')
+    args = parser.parse_args()
+
+    SAVE_LOG = args.save_log or SAVE_LOG
+    SAVE_IMAGE = args.save_image or SAVE_IMAGE
+    DUMP_API = args.dump_api or DUMP_API
+
+    api = API(args.site_url, DUMP_API)
+
     logging.basicConfig(
         format='%(asctime)s [%(module)10s] [%(levelname)5s] %(message)s',
         # filename='log/'+datetime.now().strftime('output_%Y%m%d%H%M.log'),

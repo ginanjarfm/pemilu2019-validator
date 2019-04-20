@@ -35,6 +35,7 @@ Save Failure Validation Image | Activate flag `SAVE_IMAGE`
 - [ ] Final result validation
 - [ ] Display result as static html
 - [x] Save findings and C1 files when validation FAILED
+- [ ] Pause/continue validation step
 
 ## License
 
