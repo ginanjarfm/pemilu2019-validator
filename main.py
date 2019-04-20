@@ -69,17 +69,28 @@ def show_result():
 def validate_pools():
     global candidates
 
+    last_state = read_state()
+    skip = len(last_state) == 5 or False
+    if skip: log.critical('Skipping to ' + '-'.join(last_state))
+
     regions = api.get_json('wilayah', '0.json')
     for (k0, v0) in regions.items():
-        provinces = api.get_json('wilayah', k0 + '.json')
-        for (k1, v1) in provinces.items():
-            districts = api.get_json('wilayah', k0, k1 + '.json')
-            for (k2, v2) in districts.items():
-                subdistricts = api.get_json('wilayah', k0, k1, k2 + '.json')
-                for (k3, v3) in subdistricts.items():
-                    administratives = api.get_json('wilayah', k0, k1, k2, k3 + '.json')
-                    for (k4, v4) in administratives.items():
-                        check_one(k0, k1, k2, k3, k4, v0.get('nama'), v1.get('nama'), v2.get('nama'), v3.get('nama'), v4.get('nama'))
+        if (skip and k0 == last_state[0]) or not skip:
+            provinces = api.get_json('wilayah', k0 + '.json')
+            for (k1, v1) in provinces.items():
+                if (skip and k1 == last_state[1]) or not skip:
+                    districts = api.get_json('wilayah', k0, k1 + '.json')
+                    for (k2, v2) in districts.items():
+                        if (skip and k2 == last_state[2]) or not skip:
+                            subdistricts = api.get_json('wilayah', k0, k1, k2 + '.json')
+                            for (k3, v3) in subdistricts.items():
+                                if (skip and k3 == last_state[3]) or not skip:
+                                    administratives = api.get_json('wilayah', k0, k1, k2, k3 + '.json')
+                                    for (k4, v4) in administratives.items():
+                                        if (skip and k4 == last_state[4]) or not skip:
+                                            check_one(k0, k1, k2, k3, k4, v0.get('nama'), v1.get('nama'), v2.get('nama'), v3.get('nama'), v4.get('nama'))
+                                            skip = False
+                                            clear_state()
 
 def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
     global candidates
@@ -175,6 +186,15 @@ def save_data(pool, result, images):
                         if exc.errno != errno.EEXIST:
                             raise
             api.get_image(filename, pool[0:3], pool[3:6], pool, image)
+
+def read_state():
+    with open('.state') as f:
+        content = f.readlines()
+    return [x.strip() for x in content]
+
+def clear_state():
+    with open('.state', "w") as f:
+        f.write('')
 
 def main():
     global api
