@@ -141,7 +141,7 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
 
     if (int(dpt_used or 0) != int(pool_total or 0)):
         save_log('[VALIDATION] VALIDATE [' + k0 + ']' + v0 + ' => [' + k1 + ']' + v1 + ' => [' + k2 + ']' + v2 + ' => [' + k3 + ']' + v3 + ' => [' + k4 + ']' + v4 + '', k4)
-        save_log('[VALIDATION] [FAILED 2]: total DPT votes and total pool mismatch, it should be equal!', k4)
+        save_log('[VALIDATION] [FAILED 2]: total DPT votes and total pool mismatch!', k4)
         save_log('[VALIDATION] DPT participation: ' + str(dpt_used), k4)
         save_log('[VALIDATION] pool total: ' + str(pool_total), k4)
         save_data(k4, pools, images)
@@ -151,9 +151,9 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
 
     if (int(pool_valid or 0) != int(candidate_total or 0)):
         save_log('[VALIDATION] VALIDATE [' + k0 + ']' + v0 + ' => [' + k1 + ']' + v1 + ' => [' + k2 + ']' + v2 + ' => [' + k3 + ']' + v3 + ' => [' + k4 + ']' + v4 + '', k4)
-        save_log('[VALIDATION] [FAILED 3]: sum of candidates and total pool mismatch', k4)
+        save_log('[VALIDATION] [FAILED 3]: sum of candidates and valid pool mismatch!', k4)
         save_log('[VALIDATION] sum of candidates: ' + str(candidate_total), k4)
-        save_log('[VALIDATION] pool total: ' + str(pool_valid), k4)
+        save_log('[VALIDATION] pool valid: ' + str(pool_valid), k4)
         save_data(k4, pools, images)
         diff = abs(int(pool_valid or 0) - int(candidate_total or 0))
         save_log('[VALIDATION] [DIFF 3]: ' + str(diff), k4)
