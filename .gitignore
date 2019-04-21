@@ -3,6 +3,7 @@
 *.jpg
 *.png
 *.log
+*.csv
 .vscode
 .state
 output.log

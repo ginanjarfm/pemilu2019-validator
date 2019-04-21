@@ -90,7 +90,7 @@ grep -r -n -i --include="*.log" "DIFF 3" log | \
 
 - [x] Counting process validation
 - [ ] Final result validation
-- [ ] Display result as static html
+- [x] Display result as csv files
 - [x] Save findings and C1 files when validation FAILED
 - [x] Continue from last validation step
 

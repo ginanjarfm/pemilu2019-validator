@@ -13,7 +13,7 @@ from lib.api import API
 # config
 DOMAIN = 'hhcw'
 SECTION = 'ppwp'
-SAVE_LOG = True
+SAVE_LOG = False
 SAVE_IMAGE = False
 DUMP_API = False
 
@@ -21,6 +21,7 @@ candidates = {}
 result = {}
 messages = []
 state = []
+version = None
 
 log = logging.getLogger(__name__)
 api = {}
@@ -34,6 +35,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def get_metadata():
     global candidates
+    global version
 
     version = api.get_json('version.json')
     log.critical('[SUMMARY] %s', version.get('version'))
@@ -81,6 +83,7 @@ def validate_pools():
     global state
 
     last_state = read_state()
+    state = last_state
     skip = len(last_state) == 5 or False
     if skip: log.critical('Skipping to ' + '-'.join(last_state))
 
@@ -99,8 +102,8 @@ def validate_pools():
                                     administratives = api.get_json('wilayah', k0, k1, k2, k3 + '.json')
                                     for (k4, v4) in administratives.items():
                                         if (skip and k4 == last_state[4]) or not skip:
-                                            state = [k0, k1, k2, k3, k4]
                                             check_one(k0, k1, k2, k3, k4, v0.get('nama'), v1.get('nama'), v2.get('nama'), v3.get('nama'), v4.get('nama'))
+                                            state = [k0, k1, k2, k3, k4]
                                             if skip:
                                                 skip = False
                                                 clear_state()
@@ -120,10 +123,14 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
     valid = True
     data_exist = False
 
+    candidate_message = ''
+    margin = []
     candidate_total = 0
     if chart is not None:
         data_exist = True
         for (k, v) in candidates:
+            candidate_message += 'suara [' + v.get('nomor_urut') + ']: ' + str(chart.get(k)) + '; '
+            margin.append(str(chart.get(k)))
             candidate_total += int(chart.get(k))
     else:
         data_exist = False
@@ -137,6 +144,15 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
         save_data(k4, pools, images)
         diff = abs((int(pool_invalid or 0) + int(pool_valid or 0)) - int(pool_total or 0))
         save_log('[VALIDATION] [DIFF 1]: ' + str(diff), k4)
+        save_csv(
+            str(k0) + '_' + str(v0).replace(' ', '_'),
+            str(v0),
+            str(v1),
+            str(v2),
+            str(v3),
+            str(v4),
+            '[F1] Jumlah seluruh suara sah dan suara tidak sah tidak sesuai',
+            'suara sah: ' + str(pool_valid) + '; suara tidak sah: ' + str(pool_invalid) + '; total tertulis: ' + str(pool_total) + '; total terhitung: ' + str(pool_valid + pool_invalid))
         valid = False;
 
     if (int(dpt_used or 0) != int(pool_total or 0)):
@@ -147,6 +163,15 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
         save_data(k4, pools, images)
         diff = abs(int(dpt_used or 0) - int(pool_total or 0))
         save_log('[VALIDATION] [DIFF 2]: ' + str(diff), k4)
+        save_csv(
+            str(k0) + '_' + str(v0).replace(' ', '_'),
+            str(v0),
+            str(v1),
+            str(v2),
+            str(v3),
+            str(v4),
+            '[F2] jumlah pengguna hak pilih tidak sesuai dengan jumlah seluruh suara sah dan tidak sah',
+            'pengguna hak pilih: ' + str(dpt_used) + '; jumlah suara sah dan tidak sah terhitung: ' + str(pool_total))
         valid = False;
 
     if (int(pool_valid or 0) != int(candidate_total or 0)):
@@ -157,6 +182,15 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
         save_data(k4, pools, images)
         diff = abs(int(pool_valid or 0) - int(candidate_total or 0))
         save_log('[VALIDATION] [DIFF 3]: ' + str(diff), k4)
+        save_csv(
+            str(k0) + '_' + str(v0).replace(' ', '_'),
+            str(v0),
+            str(v1),
+            str(v2),
+            str(v3),
+            str(v4),
+            '[F3] Total perolehan suara 01 & 02 tidak sesuai dengan jumlah seluruh suara sah',
+            candidate_message + 'jumlah seluruh suara sah: ' + str(pool_valid) + '; terhitung: ' + str(candidate_total), *margin)
         valid = False;
 
     if data_exist:
@@ -177,21 +211,29 @@ def check_one(k0, k1, k2, k3, k4, v0, v1, v2, v3, v4):
         log.critical('[VALIDATION] VALIDATE [%s]%s => [%s]%s => [%s]%s => [%s]%s => [%s]%s', k0, v0, k1, v1, k2, v2, k3, v3, k4, v4)
         log.critical('[VALIDATION] WAITING')
 
+def save_csv(region, *args):
+    if not os.path.isfile('log/' + datetime.now().strftime('%Y%m%d_' + region + '.csv')):
+        with open('log/' + datetime.now().strftime('%Y%m%d_' + region + '.csv'), "a") as output:
+            output.write(version.get('version') + '\n')
+            output.write(','.join(['Provinsi', 'Kab/Kota', 'Kecamatan', 'Kelurahan', 'TPS', 'Jenis Kesalahan', 'Keterangan']) + '\n')
+    with open('log/' + datetime.now().strftime('%Y%m%d_' + region + '.csv'), "a") as output:
+        output.write(','.join(args) + '\n')
+
 def save_log(message, pool):
     if SAVE_LOG:
-        with open('log/' + datetime.now().strftime('result_' + pool + '_%Y%m%d.log'), "a") as output:
+        with open('log/' + datetime.now().strftime('%Y%m%d_' + pool + '.log'), "a") as output:
             output.write(message + '\n')
 
     log.critical(message)
 
 def save_data(pool, result, images):
     if SAVE_LOG:
-        with open('log/' + datetime.now().strftime('result_' + pool + '_%Y%m%d.log'), "a") as output:
+        with open('log/' + datetime.now().strftime('%Y%m%d_' + pool + '.log'), "a") as output:
             output.write(json.dumps(result) + '\n')
 
     if SAVE_IMAGE:
         for image in images:
-            filename = 'log/' + datetime.now().strftime('result_' + pool + '_%Y%m%d/') + image
+            filename = 'log/' + datetime.now().strftime('%Y%m%d_' + pool + '/') + image
             if not os.path.exists(os.path.dirname(filename)):
                 try:
                     os.makedirs(os.path.dirname(filename))
@@ -247,7 +289,7 @@ def main():
 
     get_metadata()
     validate_pools()
-    # check_one('12920', '13905', '13906', '13907', '900070361', '1', '2', '3', '4', '5')
+    # check_one('6728', '11916', '11965', '11966', '900052080', '6728', '11916', '11965', '11966', '900052080')
     show_result()
     show_summary()
 
